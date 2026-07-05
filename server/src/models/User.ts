@@ -25,7 +25,7 @@ const userSchema = new Schema<IUser>({
   lastSeen: { type: Date, default: Date.now },
 });
 
-userSchema.pre('save', async function (this: IUser) {
+userSchema.pre<IUser>('save', async function () {
   if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 12);
 });

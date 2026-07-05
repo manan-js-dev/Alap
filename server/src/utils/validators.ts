@@ -18,5 +18,20 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const createRoomSchema = z.object({
+  name: z
+    .string()
+    .min(3, 'Room name must be at least 3 characters')
+    .max(30, 'Room name must be at most 30 characters'),
+  description: z.string().max(100, 'Description must be at most 100 characters').optional(),
+});
+
+export const sendMessageSchema = z.object({
+  content: z.string().min(1, 'Message cannot be empty').max(1000, 'Message too long'),
+  type: z.enum(['text', 'image']).optional().default('text'),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type CreateRoomInput = z.infer<typeof createRoomSchema>;
+export type SendMessageInput = z.infer<typeof sendMessageSchema>;
