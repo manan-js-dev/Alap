@@ -32,6 +32,10 @@ jobs:
       - name: TypeScript type check
         run: npx tsc --noEmit
 
+      - name: Debug env
+        run: |
+          echo "MONGODB_URI is set: ${{ secrets.MONGODB_URI != '' }}"
+
       - name: Run Jest tests
         run: npm test
         env:
