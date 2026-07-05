@@ -1,10 +1,6 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
 import express from 'express';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
 import authRoutes from '../routes/auth.routes';
 import User from '../models/User';
 
