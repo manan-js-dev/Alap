@@ -9,10 +9,11 @@ import { connectDB } from './config/db';
 import authRoutes from './routes/auth.routes';
 import roomRoutes from './routes/room.routes';
 import messageRoutes from './routes/message.routes';
+import { socketHandler } from './utils/socket';
 
 const app = express();
 const server = http.createServer(app);
-new Server(server, {
+const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     methods: ['GET', 'POST'],
@@ -37,3 +38,5 @@ connectDB().then(() => {
     console.log(`Server is running on port ${PORT}`);
   });
 });
+
+socketHandler(io);
