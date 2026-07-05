@@ -1,0 +1,25 @@
+{
+  "exclude": [
+    "./coverage",
+    "./dist",
+    "jest.config.js",
+    "eslint.config.mjs",
+    "src/__tests__/**/*.js",
+    "src/__tests__/**/*.ts",
+    "node_modules"
+  ],
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "commonjs",
+    "rootDir": "./src",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "checkJs": false,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true
+  }
+}
