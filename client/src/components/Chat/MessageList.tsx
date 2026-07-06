@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
-import type { Message } from "../../types";
+import type { FirebaseMessage } from "../../hooks/useFirebaseMessages";
 import { useAuth } from "../../context/AuthContext";
 import Avatar from "../UI/Avatar";
 
 interface MessageListProps {
-  messages: Message[];
+  messages: FirebaseMessage[];
   typingUser: string | null;
 }
 
@@ -19,8 +19,8 @@ export default function MessageList({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typingUser]);
 
-  const formatTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString([], {
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -40,25 +40,19 @@ export default function MessageList({
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {messages.map((msg) => {
-        const isOwn = msg.sender._id === user?.id;
+        const isOwn = msg.senderId === user?.id;
         return (
           <div
-            key={msg._id}
+            key={msg.id}
             className={`flex items-end gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
           >
-            {!isOwn && (
-              <Avatar
-                username={msg.sender.username}
-                isOnline={msg.sender.isOnline}
-                size="sm"
-              />
-            )}
+            {!isOwn && <Avatar username={msg.senderName} size="sm" />}
             <div
               className={`max-w-xs lg:max-w-md ${isOwn ? "items-end" : "items-start"} flex flex-col`}
             >
               {!isOwn && (
                 <span className="text-xs text-slate-400 mb-1 ml-1">
-                  {msg.sender.username}
+                  {msg.senderName}
                 </span>
               )}
               <div
@@ -71,7 +65,7 @@ export default function MessageList({
                 {msg.content}
               </div>
               <span className="text-xs text-slate-500 mt-1 mx-1">
-                {formatTime(msg.createdAt)}
+                {msg.createdAt ? formatTime(msg.createdAt) : ""}
               </span>
             </div>
           </div>

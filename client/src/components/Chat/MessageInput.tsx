@@ -4,12 +4,11 @@ import { useAuth } from "../../context/AuthContext";
 
 interface MessageInputProps {
   roomId: string;
-  onMessageSent: () => void;
+  onSendMessage: (content: string) => Promise<void>;
 }
-
 export default function MessageInput({
   roomId,
-  onMessageSent,
+  onSendMessage,
 }: MessageInputProps) {
   const { socket } = useSocket();
   const { user } = useAuth();
@@ -39,24 +38,19 @@ export default function MessageInput({
     }, 1500);
   };
 
-  const handleSend = () => {
-    if (!message.trim() || !socket) return;
+ const handleSend = async () => {
+   if (!message.trim()) return;
 
-    socket.emit("send_message", {
-      roomId,
-      content: message.trim(),
-    });
+   await onSendMessage(message.trim());
+   setMessage("");
 
-    setMessage("");
-    onMessageSent();
-
-    // Stop typing indicator
-    socket.emit("typing", {
-      roomId,
-      username: user?.username,
-      isTyping: false,
-    });
-  };
+   // Stop typing indicator
+   socket?.emit("typing", {
+     roomId,
+     username: user?.username,
+     isTyping: false,
+   });
+ };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {

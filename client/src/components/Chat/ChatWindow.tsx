@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import type { Room, Message } from "../../types";
+import type { Room } from "../../types";
 import { useSocket } from "../../context/SocketContext";
 import { useAuth } from "../../context/AuthContext";
+import { useFirebaseMessages } from "../../hooks/useFirebaseMessages";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import api from "../../utils/api";
 
 interface ChatWindowProps {
   room: Room;
@@ -13,27 +13,21 @@ interface ChatWindowProps {
 export default function ChatWindow({ room }: ChatWindowProps) {
   const { socket } = useSocket();
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, loading, sendMessage } = useFirebaseMessages(room._id);
   const [typingUser, setTypingUser] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  // Fetch existing messages when room changes
+  // Join socket room for typing indicators and presence
   useEffect(() => {
-    fetchMessages();
     socket?.emit("join_room", room._id);
 
     return () => {
       socket?.emit("leave_room", room._id);
     };
-  }, [room._id]);
+  }, [room._id, socket]);
 
-  // Listen for new messages and typing
+  // Listen for typing indicators via Socket.io
   useEffect(() => {
     if (!socket) return;
-
-    socket.on("new_message", (message: Message) => {
-      setMessages((prev) => [...prev, message]);
-    });
 
     socket.on("user_typing", ({ username, isTyping }) => {
       if (username === user?.username) return;
@@ -41,22 +35,9 @@ export default function ChatWindow({ room }: ChatWindowProps) {
     });
 
     return () => {
-      socket.off("new_message");
       socket.off("user_typing");
     };
-  }, [socket]);
-
-  const fetchMessages = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/rooms/${room._id}/messages`);
-      setMessages(res.data);
-    } catch {
-      console.error("Failed to fetch messages");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [socket, user]);
 
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -83,7 +64,10 @@ export default function ChatWindow({ room }: ChatWindowProps) {
       )}
 
       {/* Input */}
-      <MessageInput roomId={room._id} onMessageSent={() => {}} />
+      <MessageInput
+        roomId={room._id}
+        onSendMessage={sendMessage}
+      />
     </div>
   );
 }
