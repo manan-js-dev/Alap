@@ -31,7 +31,24 @@ export const sendMessageSchema = z.object({
   type: z.enum(['text', 'image']).optional().default('text'),
 });
 
+export const searchUserSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+export const sendRequestSchema = z.object({
+  receiverId: z.string().min(1, 'Receiver ID is required'),
+});
+
+export const updateRequestSchema = z.object({
+  status: z.enum(['accepted', 'rejected'], {
+    error: 'Status must be accepted or rejected',
+  }),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateRoomInput = z.infer<typeof createRoomSchema>;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
+export type SearchUserInput = z.infer<typeof searchUserSchema>;
+export type SendRequestInput = z.infer<typeof sendRequestSchema>;
+export type UpdateRequestInput = z.infer<typeof updateRequestSchema>;

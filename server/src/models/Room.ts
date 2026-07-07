@@ -6,6 +6,7 @@ export interface IRoom extends Document {
   members: mongoose.Types.ObjectId[];
   createdBy: mongoose.Types.ObjectId;
   lastMessage?: mongoose.Types.ObjectId;
+  isDirect: boolean;
 }
 
 const roomsSchema = new Schema<IRoom>(
@@ -15,6 +16,7 @@ const roomsSchema = new Schema<IRoom>(
     members: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     lastMessage: { type: Schema.Types.ObjectId, ref: 'Message' },
+    isDirect: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

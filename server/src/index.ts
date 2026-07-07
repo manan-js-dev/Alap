@@ -10,6 +10,8 @@ import authRoutes from './routes/auth.routes';
 import roomRoutes from './routes/room.routes';
 import messageRoutes from './routes/message.routes';
 import { socketHandler } from './utils/socket';
+import userRoutes from './routes/user.routes';
+import chatRequestRoutes from './routes/chatRequest.routes';
 
 const app = express();
 const server = http.createServer(app);
@@ -29,6 +31,8 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/rooms', messageRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/requests', chatRequestRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
