@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Room } from "../../types";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 import Avatar from "../UI/Avatar";
 import api from "../../utils/api";
 
@@ -11,24 +12,32 @@ interface SidebarProps {
 
 export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newRoom, setNewRoom] = useState({ name: "", description: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchRooms();
-  }, []);
+    let isMounted = true;
 
-  const fetchRooms = async () => {
-    try {
-      const res = await api.get("/rooms");
-      setRooms(res.data);
-    } catch {
-      console.error("Failed to fetch rooms");
-    }
-  };
+    const loadRooms = async () => {
+      try {
+        const res = await api.get("/rooms");
+        if (isMounted) setRooms(res.data);
+      } catch {
+        console.error("Failed to fetch rooms");
+      }
+    };
+
+    loadRooms();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,34 +56,171 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
     }
   };
 
+  const filteredRooms = rooms.filter((r) =>
+    r.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
   return (
-    <div className="w-72 bg-slate-800 border-r border-slate-700 flex flex-col h-full">
+    <div
+      className="w-80 flex flex-col h-full border-r"
+      style={{
+        background: "var(--bg-sidebar)",
+        borderColor: "var(--border-color)",
+      }}
+    >
       {/* Header */}
-      <div className="p-4 border-b border-slate-700">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-bold text-indigo-400">💬 Alap</h1>
-          <button
-            onClick={() => setShowCreate(!showCreate)}
-            className="w-8 h-8 bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center justify-center text-white transition"
-            title="Create room"
-          >
-            +
-          </button>
+      <div
+        className="px-4 py-3 flex items-center justify-between"
+        style={{ background: "var(--bg-secondary)" }}
+      >
+        <div className="flex items-center gap-3">
+          <Avatar username={user?.username || "U"} isOnline={true} size="md" />
+          <div>
+            <p
+              className="text-sm font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {user?.username}
+            </p>
+            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+              Online
+            </p>
+          </div>
         </div>
 
-        {/* User info */}
         <div className="flex items-center gap-2">
-          <Avatar username={user?.username || "U"} isOnline={true} size="sm" />
-          <span className="text-sm text-slate-300 font-medium">
-            {user?.username}
-          </span>
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-80"
+            style={{ background: "var(--bg-input)" }}
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="var(--text-secondary)"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M18.364 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 110 10A5 5 0 0112 7z"
+                />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="var(--text-secondary)"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
+              </svg>
+            )}
+          </button>
+
+          {/* New room */}
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-80"
+            style={{ background: "var(--bg-input)" }}
+            title="New room"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="var(--text-secondary)"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          </button>
+
+          {/* Logout */}
+          <button
+            onClick={logout}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-80"
+            style={{ background: "var(--bg-input)" }}
+            title="Sign out"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="var(--text-secondary)"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="px-3 py-2" style={{ background: "var(--bg-sidebar)" }}>
+        <div
+          className="flex items-center gap-2 rounded-lg px-3 py-2"
+          style={{ background: "var(--bg-input)" }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-4 h-4 flex-shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="var(--text-secondary)"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search rooms..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-transparent text-sm w-full focus:outline-none"
+            style={{ color: "var(--text-primary)" }}
+          />
         </div>
       </div>
 
       {/* Create Room Form */}
       {showCreate && (
-        <div className="p-4 border-b border-slate-700 bg-slate-750">
-          <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wide">
+        <div
+          className="mx-3 mb-2 p-3 rounded-lg border"
+          style={{
+            background: "var(--bg-input)",
+            borderColor: "var(--border-color)",
+          }}
+        >
+          <p
+            className="text-xs font-semibold mb-2 uppercase tracking-wide"
+            style={{ color: "var(--text-secondary)" }}
+          >
             New Room
           </p>
           {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
@@ -85,7 +231,12 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
               value={newRoom.name}
               onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
               required
-              className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none border"
+              style={{
+                background: "var(--bg-primary)",
+                color: "var(--text-primary)",
+                borderColor: "var(--border-color)",
+              }}
             />
             <input
               type="text"
@@ -94,20 +245,29 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
               onChange={(e) =>
                 setNewRoom({ ...newRoom, description: e.target.value })
               }
-              className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none border"
+              style={{
+                background: "var(--bg-primary)",
+                color: "var(--text-primary)",
+                borderColor: "var(--border-color)",
+              }}
             />
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm py-2 rounded-lg transition"
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-2 rounded-lg transition"
               >
                 {loading ? "Creating..." : "Create"}
               </button>
               <button
                 type="button"
                 onClick={() => setShowCreate(false)}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-sm py-2 rounded-lg transition"
+                className="flex-1 text-sm py-2 rounded-lg transition"
+                style={{
+                  background: "var(--bg-primary)",
+                  color: "var(--text-secondary)",
+                }}
               >
                 Cancel
               </button>
@@ -117,49 +277,65 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
       )}
 
       {/* Rooms List */}
-      <div className="flex-1 overflow-y-auto p-2">
-        <p className="text-xs text-slate-500 uppercase tracking-wide px-2 py-2">
-          Rooms
-        </p>
-        {rooms.length === 0 ? (
-          <p className="text-slate-500 text-sm text-center mt-4">
-            No rooms yet. Create one!
-          </p>
+      <div className="flex-1 overflow-y-auto">
+        {filteredRooms.length === 0 ? (
+          <div className="text-center mt-8">
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              {search ? "No rooms found" : "No rooms yet. Create one!"}
+            </p>
+          </div>
         ) : (
-          rooms.map((room) => (
+          filteredRooms.map((room) => (
             <button
               key={room._id}
               onClick={() => onSelectRoom(room)}
-              className={`w-full text-left px-3 py-3 rounded-lg mb-1 transition ${
-                selectedRoom?._id === room._id
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-300 hover:bg-slate-700"
-              }`}
+              className="w-full flex items-center gap-3 px-4 py-3 transition"
+              style={{
+                background:
+                  selectedRoom?._id === room._id
+                    ? "var(--active-color)"
+                    : "transparent",
+                borderBottom: "1px solid var(--border-color)",
+              }}
+              onMouseEnter={(e) => {
+                if (selectedRoom?._id !== room._id)
+                  (e.currentTarget as HTMLElement).style.background =
+                    "var(--hover-color)";
+              }}
+              onMouseLeave={(e) => {
+                if (selectedRoom?._id !== room._id)
+                  (e.currentTarget as HTMLElement).style.background =
+                    "transparent";
+              }}
             >
-              <div className="flex items-center gap-2">
-                <span className="text-lg">#</span>
-                <div>
-                  <p className="text-sm font-medium">{room.name}</p>
-                  {room.description && (
-                    <p className="text-xs text-slate-400 truncate">
-                      {room.description}
-                    </p>
-                  )}
+              {/* Room Avatar */}
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0"
+                style={{ background: "#0084ff" }}
+              >
+                #
+              </div>
+
+              {/* Room Info */}
+              <div className="flex-1 text-left min-w-0">
+                <div className="flex items-center justify-between">
+                  <p
+                    className="text-sm font-semibold truncate"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {room.name}
+                  </p>
                 </div>
+                <p
+                  className="text-xs truncate mt-0.5"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {room.description || "No description"}
+                </p>
               </div>
             </button>
           ))
         )}
-      </div>
-
-      {/* Logout */}
-      <div className="p-4 border-t border-slate-700">
-        <button
-          onClick={logout}
-          className="w-full text-slate-400 hover:text-red-400 text-sm py-2 rounded-lg hover:bg-slate-700 transition"
-        >
-          Sign Out
-        </button>
       </div>
     </div>
   );

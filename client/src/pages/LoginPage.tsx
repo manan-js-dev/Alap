@@ -35,7 +35,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-indigo-400 mb-2">💬 Alap</h1>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <img
+              src="/logo.png"
+              alt="Alap Logo"
+              className="w-[10rem] h-[10rem] object-contain"
+            />
+            {/* <h1 className="text-4xl font-bold text-indigo-400">Alap</h1> */}
+          </div>
           <p className="text-slate-400">Welcome back, sign in to continue</p>
         </div>
 
