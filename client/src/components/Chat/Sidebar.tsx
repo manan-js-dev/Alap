@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { Room } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
+import { getErrorMessage } from "../../utils/error";
 import Avatar from "../UI/Avatar";
+import SearchUsers from "./SearchUsers";
+import ChatRequests from "./ChatRequests";
+import DirectMessageList from "./DirectMessageList";
 import api from "../../utils/api";
 
 interface SidebarProps {
@@ -15,29 +19,37 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
   const { isDark, toggleTheme } = useTheme();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showRequests, setShowRequests] = useState(false);
   const [newRoom, setNewRoom] = useState({ name: "", description: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const fetchRooms = useCallback(async () => {
+    try {
+      const res = await api.get("/rooms");
+       setRooms(res.data.filter((r: Room) => !r.isDirect));
+    } catch (error: unknown) {
+      console.error(getErrorMessage(error));
+    }
+  }, []);
+
+  const fetchPendingCount = useCallback(async () => {
+    try {
+      const res = await api.get("/requests");
+      setPendingCount(res.data.length);
+    } catch (error: unknown) {
+      console.error(getErrorMessage(error));
+    }
+  }, []);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadRooms = async () => {
-      try {
-        const res = await api.get("/rooms");
-        if (isMounted) setRooms(res.data);
-      } catch {
-        console.error("Failed to fetch rooms");
-      }
-    };
-
-    loadRooms();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchRooms();
+    fetchPendingCount();
+  }, [fetchRooms, fetchPendingCount]);
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,8 +61,8 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
       setNewRoom({ name: "", description: "" });
       setShowCreate(false);
       onSelectRoom(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to create room");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -88,13 +100,64 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {/* Find people */}
+          <button
+            onClick={() => setShowSearch(true)}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70"
+            style={{ background: "var(--bg-input)" }}
+            title="Find people"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="var(--text-secondary)"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+              />
+            </svg>
+          </button>
+
+          {/* Chat requests with badge */}
+          <button
+            onClick={() => setShowRequests(true)}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70 relative"
+            style={{ background: "var(--bg-input)" }}
+            title="Chat requests"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="var(--text-secondary)"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+              />
+            </svg>
+            {pendingCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-80"
+            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70"
             style={{ background: "var(--bg-input)" }}
-            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            title={isDark ? "Light mode" : "Dark mode"}
           >
             {isDark ? (
               <svg
@@ -132,7 +195,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
           {/* New room */}
           <button
             onClick={() => setShowCreate(!showCreate)}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-80"
+            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70"
             style={{ background: "var(--bg-input)" }}
             title="New room"
           >
@@ -155,7 +218,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
           {/* Logout */}
           <button
             onClick={logout}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-80"
+            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70"
             style={{ background: "var(--bg-input)" }}
             title="Sign out"
           >
@@ -276,10 +339,24 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
         </div>
       )}
 
-      {/* Rooms List */}
+      {/* Rooms + DMs List */}
       <div className="flex-1 overflow-y-auto">
+        {/* Direct Messages */}
+        <DirectMessageList
+          selectedRoomId={selectedRoom?._id || null}
+          onSelectRoom={onSelectRoom}
+        />
+
+        {/* Group Rooms */}
+        <p
+          className="text-xs font-semibold uppercase tracking-wide px-4 py-2"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          Rooms
+        </p>
+
         {filteredRooms.length === 0 ? (
-          <div className="text-center mt-8">
+          <div className="text-center mt-4">
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               {search ? "No rooms found" : "No rooms yet. Create one!"}
             </p>
@@ -308,24 +385,19 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
                     "transparent";
               }}
             >
-              {/* Room Avatar */}
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0"
                 style={{ background: "#0084ff" }}
               >
                 #
               </div>
-
-              {/* Room Info */}
               <div className="flex-1 text-left min-w-0">
-                <div className="flex items-center justify-between">
-                  <p
-                    className="text-sm font-semibold truncate"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {room.name}
-                  </p>
-                </div>
+                <p
+                  className="text-sm font-semibold truncate"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {room.name}
+                </p>
                 <p
                   className="text-xs truncate mt-0.5"
                   style={{ color: "var(--text-secondary)" }}
@@ -337,6 +409,19 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
           ))
         )}
       </div>
+
+      {/* Modals */}
+      {showSearch && <SearchUsers onClose={() => setShowSearch(false)} />}
+
+      {showRequests && (
+        <ChatRequests
+          onClose={() => setShowRequests(false)}
+          onRequestAccepted={() => {
+            fetchPendingCount();
+            fetchRooms();
+          }}
+        />
+      )}
     </div>
   );
 }

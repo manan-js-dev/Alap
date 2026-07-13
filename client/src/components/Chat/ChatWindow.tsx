@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useFirebaseMessages } from "../../hooks/useFirebaseMessages";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
+import Avatar from "../UI/Avatar";
 
 interface ChatWindowProps {
   room: Room;
@@ -45,21 +46,33 @@ export default function ChatWindow({ room }: ChatWindowProps) {
         }}
       >
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-            style={{ background: "#0084ff" }}
-          >
-            #
-          </div>
+          {room.isDirect ? (
+            <Avatar
+              username={room.directUser?.username || "User"}
+              isOnline={room.directUser?.isOnline}
+              size="md"
+            />
+          ) : (
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+              style={{ background: "#0084ff" }}
+            >
+              #
+            </div>
+          )}
           <div>
             <p
               className="font-semibold text-sm"
               style={{ color: "var(--text-primary)" }}
             >
-              {room.name}
+              {room.isDirect ? room.directUser?.username : room.name}
             </p>
             <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-              {room.members?.length || 0} members
+              {room.isDirect
+                ? room.directUser?.isOnline
+                  ? "Online"
+                  : "Offline"
+                : `${room.members?.length || 0} members`}
             </p>
           </div>
         </div>
@@ -92,7 +105,7 @@ export default function ChatWindow({ room }: ChatWindowProps) {
           <button
             className="w-9 h-9 rounded-full flex items-center justify-center transition hover:opacity-70"
             style={{ background: "var(--bg-input)" }}
-            title="Members"
+            title="More options"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -105,7 +118,7 @@ export default function ChatWindow({ room }: ChatWindowProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
               />
             </svg>
           </button>

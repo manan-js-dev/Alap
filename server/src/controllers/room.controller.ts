@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 
 export const getRooms = async (req: AuthRequest, res: Response) => {
   try {
-    const rooms = await Room.find()
+    const rooms = await Room.find({ isDirect: { $ne: true } })
       .populate('createdBy', 'username')
       .populate('lastMessage')
       .sort({ updatedAt: -1 });

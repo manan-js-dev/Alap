@@ -13,6 +13,8 @@ export interface Room {
   members: string[];
   createdBy: { _id: string; username: string };
   lastMessage?: Message;
+  isDirect?: boolean;
+  directUser?: { username: string; isOnline: boolean };
   createdAt: string;
 }
 
@@ -32,4 +34,46 @@ export interface Message {
 export interface AuthResponse {
   token: string;
   user: User;
+}
+
+export interface ChatRequest {
+  _id: string;
+  sender: {
+    _id: string;
+    username: string;
+    email: string;
+    isOnline: boolean;
+  };
+  receiver: {
+    _id: string;
+    username: string;
+    email: string;
+    isOnline: boolean;
+  };
+  status: "pending" | "accepted" | "rejected";
+  room?: Room;
+  createdAt: string;
+}
+
+export interface DirectRoom {
+  _id: string;
+  sender: {
+    _id: string;
+    username: string;
+    isOnline: boolean;
+  };
+  receiver: {
+    _id: string;
+    username: string;
+    isOnline: boolean;
+  };
+  status: "accepted";
+  room: Room;
+}
+export interface SearchedUser {
+  _id: string;
+  username: string;
+  email: string;
+  isOnline: boolean;
+  lastSeen: string;
 }
