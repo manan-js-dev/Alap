@@ -8,6 +8,8 @@ import SearchUsers from "./SearchUsers";
 import ChatRequests from "./ChatRequests";
 import DirectMessageList from "./DirectMessageList";
 import api from "../../utils/api";
+import EditProfile from "./EditProfile";
+import { useSocket } from "../../context/SocketContext";
 
 interface SidebarProps {
   selectedRoom: Room | null;
@@ -26,6 +28,9 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const { socket } = useSocket();
+  const [refreshDMs, setRefreshDMs] = useState(0);
 
   const fetchRooms = useCallback(async () => {
     try {
@@ -72,6 +77,23 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
     r.name.toLowerCase().includes(search.toLowerCase()),
   );
 
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("new_request", () => {
+      setPendingCount((prev) => prev + 1);
+    });
+
+    socket.on("request_accepted", () => {
+      setRefreshDMs((prev) => prev + 1);
+    });
+
+    return () => {
+      socket.off("new_request");
+       socket.off("request_accepted");
+    };
+  }, [socket]);
+
   return (
     <div
       className="w-80 flex flex-col h-full border-r"
@@ -85,11 +107,26 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
         className="px-4 py-3 flex items-center justify-between"
         style={{ background: "var(--bg-secondary)" }}
       >
-        <div className="flex items-center gap-3">
-          <Avatar username={user?.username || "U"} isOnline={true} size="md" />
+        <button
+          onClick={() => setShowEditProfile(true)}
+          className="flex items-center gap-3 hover:opacity-80 transition"
+        >
+          {user?.avatar ? (
+            <img
+              src={user.avatar}
+              alt="avatar"
+              className="w-9 h-9 rounded-full object-cover"
+            />
+          ) : (
+            <Avatar
+              username={user?.username || "U"}
+              isOnline={true}
+              size="md"
+            />
+          )}
           <div>
             <p
-              className="text-sm font-semibold"
+              className="text-sm font-semibold text-left"
               style={{ color: "var(--text-primary)" }}
             >
               {user?.username}
@@ -98,7 +135,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
               Online
             </p>
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center gap-1">
           {/* Find people */}
@@ -345,6 +382,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
         <DirectMessageList
           selectedRoomId={selectedRoom?._id || null}
           onSelectRoom={onSelectRoom}
+          refreshTrigger={refreshDMs}
         />
 
         {/* Group Rooms */}
@@ -421,6 +459,10 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
             fetchRooms();
           }}
         />
+      )}
+
+      {showEditProfile && (
+        <EditProfile onClose={() => setShowEditProfile(false)} />
       )}
     </div>
   );

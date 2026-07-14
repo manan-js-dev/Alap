@@ -45,6 +45,17 @@ export const updateRequestSchema = z.object({
   }),
 });
 
+export const updateProfileSchema = z.object({
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(20, 'Username must be at most 20 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores')
+    .optional(),
+  bio: z.string().max(150, 'Bio must be at most 150 characters').optional(),
+  avatar: z.string().url('Invalid avatar URL').optional(),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateRoomInput = z.infer<typeof createRoomSchema>;
@@ -52,3 +63,4 @@ export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 export type SearchUserInput = z.infer<typeof searchUserSchema>;
 export type SendRequestInput = z.infer<typeof sendRequestSchema>;
 export type UpdateRequestInput = z.infer<typeof updateRequestSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

@@ -106,7 +106,11 @@ export default function MessageList({
                 {/* Avatar placeholder for alignment */}
                 <div className="w-8 flex-shrink-0">
                   {showAvatar && !isOwn && (
-                    <Avatar username={msg.senderName} size="sm" />
+                    <Avatar
+                      username={msg.senderName}
+                      avatar={msg.senderAvatar}
+                      size="sm"
+                    />
                   )}
                 </div>
 

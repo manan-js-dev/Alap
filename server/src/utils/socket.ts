@@ -5,7 +5,12 @@ import Room from '../models/Room';
 import User from '../models/User';
 import mongoose from 'mongoose';
 
+let ioInstance: Server;
+const onlineUsers = new Map<string, string>();
+
 export const socketHandler = (io: Server) => {
+  ioInstance = io;
+
   io.on('connection', async (socket: Socket) => {
     // Look for auth.userId first (frontend), fallback to headers.userid (Postman)
     const userId = socket.handshake.auth?.userId || socket.handshake.headers['userid'];
@@ -13,6 +18,7 @@ export const socketHandler = (io: Server) => {
 
     // Mark user online
     if (userId) {
+      onlineUsers.set(userId, socket.id);
       await User.findByIdAndUpdate(userId, { isOnline: true });
       io.emit('user_status', { userId, isOnline: true });
     }
@@ -76,6 +82,7 @@ export const socketHandler = (io: Server) => {
     socket.on('disconnect', async () => {
       console.log(`❌ User disconnected: ${userId}`);
       if (userId) {
+        onlineUsers.delete(userId);
         await User.findByIdAndUpdate(userId, {
           isOnline: false,
           lastSeen: new Date(),
@@ -85,3 +92,6 @@ export const socketHandler = (io: Server) => {
     });
   });
 };
+
+export const getIO = () => ioInstance;
+export { onlineUsers };

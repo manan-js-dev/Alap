@@ -2,6 +2,8 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  avatar?: string;
+  bio?: string;
   isOnline: boolean;
   lastSeen: string;
 }
@@ -14,7 +16,11 @@ export interface Room {
   createdBy: { _id: string; username: string };
   lastMessage?: Message;
   isDirect?: boolean;
-  directUser?: { username: string; isOnline: boolean };
+  directUser?: {
+    username: string;
+    avatar?: string;
+    isOnline: boolean;
+  };
   createdAt: string;
 }
 
@@ -60,11 +66,13 @@ export interface DirectRoom {
   sender: {
     _id: string;
     username: string;
+    avatar?: string;
     isOnline: boolean;
   };
   receiver: {
     _id: string;
     username: string;
+    avatar?: string;
     isOnline: boolean;
   };
   status: "accepted";
@@ -74,6 +82,7 @@ export interface SearchedUser {
   _id: string;
   username: string;
   email: string;
+  avatar?: string;
   isOnline: boolean;
   lastSeen: string;
 }

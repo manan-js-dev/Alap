@@ -49,6 +49,7 @@ export default function ChatWindow({ room }: ChatWindowProps) {
           {room.isDirect ? (
             <Avatar
               username={room.directUser?.username || "User"}
+              avatar={room.directUser?.avatar}
               isOnline={room.directUser?.isOnline}
               size="md"
             />

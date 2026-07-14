@@ -8,11 +8,13 @@ import api from "../../utils/api";
 interface DirectMessageListProps {
   selectedRoomId: string | null;
   onSelectRoom: (room: Room) => void;
+  refreshTrigger: number;
 }
 
 export default function DirectMessageList({
   selectedRoomId,
   onSelectRoom,
+  refreshTrigger,
 }: DirectMessageListProps) {
   const { user } = useAuth();
   const [directRooms, setDirectRooms] = useState<DirectRoom[]>([]);
@@ -30,7 +32,7 @@ export default function DirectMessageList({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDirectRooms();
-  }, [fetchDirectRooms]);
+  }, [fetchDirectRooms, refreshTrigger]);
 
   const getOtherUser = (room: DirectRoom) => {
     return room.sender._id === user?.id ? room.receiver : room.sender;
@@ -58,6 +60,7 @@ export default function DirectMessageList({
                 ...dm.room,
                 directUser: {
                   username: otherUser.username,
+                  avatar: otherUser.avatar,
                   isOnline: otherUser.isOnline,
                 },
               })
@@ -83,6 +86,7 @@ export default function DirectMessageList({
           >
             <Avatar
               username={otherUser.username}
+              avatar={otherUser.avatar}
               isOnline={otherUser.isOnline}
               size="md"
             />

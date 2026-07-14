@@ -15,6 +15,15 @@ export interface FirebaseMessage {
   content: string;
   senderId: string;
   senderName: string;
+  senderAvatar?: string;
+  createdAt: number;
+}
+
+interface FirebaseMessageData {
+  content: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
   createdAt: number;
 }
 
@@ -41,13 +50,17 @@ export const useFirebaseMessages = (roomId: string) => {
       }
 
       const parsed: FirebaseMessage[] = Object.entries(data).map(
-        ([id, value]: [string, any]) => ({
-          id,
-          content: value.content,
-          senderId: value.senderId,
-          senderName: value.senderName,
-          createdAt: value.createdAt,
-        }),
+        ([id, value]) => {
+          const msg = value as FirebaseMessageData;
+          return {
+            id,
+            content: msg.content,
+            senderId: msg.senderId,
+            senderName: msg.senderName,
+            senderAvatar: msg.senderAvatar || "",
+            createdAt: msg.createdAt,
+          };
+        },
       );
 
       // Sort by time
@@ -67,6 +80,7 @@ export const useFirebaseMessages = (roomId: string) => {
       content: content.trim(),
       senderId: user.id,
       senderName: user.username,
+      senderAvatar: user.avatar || "",
       createdAt: serverTimestamp(),
     });
   };

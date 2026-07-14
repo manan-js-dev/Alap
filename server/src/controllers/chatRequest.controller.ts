@@ -3,6 +3,8 @@ import ChatRequest from '../models/ChatRequest';
 import Room from '../models/Room';
 import { AuthRequest } from '../middleware/auth.middleware';
 import mongoose from 'mongoose';
+import { getIO, onlineUsers } from '../utils/socket';
+import { IUser } from '../models/User';
 
 export const sendRequest = async (req: AuthRequest, res: Response) => {
   try {
@@ -42,6 +44,11 @@ export const sendRequest = async (req: AuthRequest, res: Response) => {
     ]);
 
     res.status(201).json(populated);
+
+    const receiverSocketId = onlineUsers.get(receiverId);
+    if (receiverSocketId) {
+      getIO().to(receiverSocketId).emit('new_request', populated);
+    }
   } catch {
     res.status(500).json({ message: 'Server error' });
   }
@@ -86,6 +93,24 @@ export const updateRequest = async (req: AuthRequest, res: Response) => {
     }
 
     await request.save();
+    const sender = request.sender as unknown as IUser;
+    const receiver = request.receiver as unknown as IUser;
+
+    const senderId = sender._id.toString();
+    const receiverId = receiver._id.toString();
+
+    const senderSocketId = onlineUsers.get(senderId);
+    const receiverSocketId = onlineUsers.get(receiverId);
+
+    if (status === 'accepted') {
+      if (senderSocketId) {
+        getIO().to(senderSocketId).emit('request_accepted', { room: request.room });
+      }
+      if (receiverSocketId) {
+        getIO().to(receiverSocketId).emit('request_accepted', { room: request.room });
+      }
+    }
+
     res.json(request);
   } catch {
     res.status(500).json({ message: 'Server error' });
