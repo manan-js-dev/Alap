@@ -9,6 +9,7 @@ import {
 } from "firebase/database";
 import { db } from "../utils/firebase";
 import { useAuth } from "../context/AuthContext";
+import { useSocket } from "../context/SocketContext";
 
 export interface FirebaseMessage {
   id: string;
@@ -29,6 +30,7 @@ interface FirebaseMessageData {
 
 export const useFirebaseMessages = (roomId: string) => {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const [messages, setMessages] = useState<FirebaseMessage[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -83,6 +85,9 @@ export const useFirebaseMessages = (roomId: string) => {
       senderAvatar: user.avatar || "",
       createdAt: serverTimestamp(),
     });
+
+    console.log("Emitting notify_message", { roomId, senderId: user.id });
+    socket?.emit("notify_message", { roomId, senderId: user.id });
   };
 
   return { messages, loading, sendMessage };

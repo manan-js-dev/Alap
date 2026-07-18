@@ -7,9 +7,9 @@ import Avatar from "../UI/Avatar";
 import SearchUsers from "./SearchUsers";
 import ChatRequests from "./ChatRequests";
 import DirectMessageList from "./DirectMessageList";
-import api from "../../utils/api";
 import EditProfile from "./EditProfile";
 import { useSocket } from "../../context/SocketContext";
+import api from "../../utils/api";
 
 interface SidebarProps {
   selectedRoom: Room | null;
@@ -19,23 +19,23 @@ interface SidebarProps {
 export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const { socket, unreadCounts, incrementUnread } = useSocket();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const [newRoom, setNewRoom] = useState({ name: "", description: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
-  const [showEditProfile, setShowEditProfile] = useState(false);
-  const { socket } = useSocket();
   const [refreshDMs, setRefreshDMs] = useState(0);
 
   const fetchRooms = useCallback(async () => {
     try {
       const res = await api.get("/rooms");
-       setRooms(res.data.filter((r: Room) => !r.isDirect));
+      setRooms(res.data.filter((r: Room) => !r.isDirect));
     } catch (error: unknown) {
       console.error(getErrorMessage(error));
     }
@@ -51,10 +51,42 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRooms();
     fetchPendingCount();
   }, [fetchRooms, fetchPendingCount]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewRequest = () => {
+      setPendingCount((prev) => prev + 1);
+    };
+
+    const handleRequestAccepted = () => {
+      setRefreshDMs((prev) => prev + 1);
+    };
+
+    const handleNewMessage = ({ roomId }: { roomId: string }) => {
+      console.log(
+        "new_message_notification received",
+        roomId,
+        "selected:",
+        selectedRoom?._id,
+      );
+      if (roomId !== selectedRoom?._id) {
+        incrementUnread(roomId);
+      }
+    };
+    socket.on("new_request", handleNewRequest);
+    socket.on("request_accepted", handleRequestAccepted);
+    socket.on("new_message_notification", handleNewMessage);
+
+    return () => {
+      socket.off("new_request", handleNewRequest);
+      socket.off("request_accepted", handleRequestAccepted);
+      socket.off("new_message_notification", handleNewMessage);
+    };
+  }, [socket, selectedRoom?._id, incrementUnread]);
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,23 +108,6 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
   const filteredRooms = rooms.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase()),
   );
-
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on("new_request", () => {
-      setPendingCount((prev) => prev + 1);
-    });
-
-    socket.on("request_accepted", () => {
-      setRefreshDMs((prev) => prev + 1);
-    });
-
-    return () => {
-      socket.off("new_request");
-       socket.off("request_accepted");
-    };
-  }, [socket]);
 
   return (
     <div
@@ -378,14 +393,12 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
 
       {/* Rooms + DMs List */}
       <div className="flex-1 overflow-y-auto">
-        {/* Direct Messages */}
         <DirectMessageList
           selectedRoomId={selectedRoom?._id || null}
           onSelectRoom={onSelectRoom}
           refreshTrigger={refreshDMs}
         />
 
-        {/* Group Rooms */}
         <p
           className="text-xs font-semibold uppercase tracking-wide px-4 py-2"
           style={{ color: "var(--text-secondary)" }}
@@ -430,12 +443,19 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
                 #
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p
-                  className="text-sm font-semibold truncate"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {room.name}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p
+                    className="text-sm font-semibold truncate"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {room.name}
+                  </p>
+                  {unreadCounts[room._id] > 0 && (
+                    <span className="ml-2 min-w-5 h-5 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center px-1">
+                      {unreadCounts[room._id]}
+                    </span>
+                  )}
+                </div>
                 <p
                   className="text-xs truncate mt-0.5"
                   style={{ color: "var(--text-secondary)" }}
@@ -450,7 +470,6 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
 
       {/* Modals */}
       {showSearch && <SearchUsers onClose={() => setShowSearch(false)} />}
-
       {showRequests && (
         <ChatRequests
           onClose={() => setShowRequests(false)}
@@ -460,7 +479,6 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
           }}
         />
       )}
-
       {showEditProfile && (
         <EditProfile onClose={() => setShowEditProfile(false)} />
       )}

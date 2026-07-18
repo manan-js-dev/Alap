@@ -11,6 +11,9 @@ import { useAuth } from "./AuthContext";
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
+  unreadCounts: Record<string, number>;
+  clearUnread: (roomId: string) => void;
+  incrementUnread: (roomId: string) => void;
 }
 
 const SocketContext = createContext<SocketContextType | null>(null);
@@ -19,6 +22,15 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const { user, isAuthenticated } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+
+  const clearUnread = (roomId: string) => {
+    setUnreadCounts((prev) => ({ ...prev, [roomId]: 0 }));
+  };
+
+  const incrementUnread = (roomId: string) => {
+    setUnreadCounts((prev) => ({ ...prev, [roomId]: (prev[roomId] || 0) + 1 }));
+  };
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -31,12 +43,10 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     );
 
     newSocket.on("connect", () => {
-      console.log("⚡ Socket connected");
       setIsConnected(true);
     });
 
     newSocket.on("disconnect", () => {
-      console.log("❌ Socket disconnected");
       setIsConnected(false);
     });
 
@@ -48,7 +58,15 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   }, [isAuthenticated, user]);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
+    <SocketContext.Provider
+      value={{
+        socket,
+        isConnected,
+        unreadCounts,
+        clearUnread,
+        incrementUnread,
+      }}
+    >
       {children}
     </SocketContext.Provider>
   );

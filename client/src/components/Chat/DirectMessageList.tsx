@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getErrorMessage } from "../../utils/error";
 import Avatar from "../UI/Avatar";
 import api from "../../utils/api";
+import { useSocket } from "../../context/SocketContext";
 
 interface DirectMessageListProps {
   selectedRoomId: string | null;
@@ -19,6 +20,7 @@ export default function DirectMessageList({
   const { user } = useAuth();
   const [directRooms, setDirectRooms] = useState<DirectRoom[]>([]);
   const [error, setError] = useState("");
+  const { unreadCounts } = useSocket();
 
   const fetchDirectRooms = useCallback(async () => {
     try {
@@ -91,12 +93,19 @@ export default function DirectMessageList({
               size="md"
             />
             <div className="flex-1 text-left min-w-0">
-              <p
-                className="text-sm font-semibold truncate"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {otherUser.username}
-              </p>
+              <div className="flex items-center justify-between">
+                <p
+                  className="text-sm font-semibold truncate"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {otherUser.username}
+                </p>
+                {unreadCounts[dm.room._id] > 0 && (
+                  <span className="ml-2 min-w-5 h-5 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center px-1">
+                    {unreadCounts[dm.room._id]}
+                  </span>
+                )}
+              </div>
               <p
                 className="text-xs truncate"
                 style={{ color: "var(--text-secondary)" }}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Room } from "../../types";
 import { useSocket } from "../../context/SocketContext";
 import { useAuth } from "../../context/AuthContext";
@@ -6,34 +6,68 @@ import { useFirebaseMessages } from "../../hooks/useFirebaseMessages";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import Avatar from "../UI/Avatar";
+import GroupSettings from "./GroupSettings";
 
 interface ChatWindowProps {
   room: Room;
 }
 
 export default function ChatWindow({ room }: ChatWindowProps) {
-  const { socket } = useSocket();
   const { user } = useAuth();
   const { messages, loading, sendMessage } = useFirebaseMessages(room._id);
   const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
+  const { socket, clearUnread } = useSocket();
+  const joinedRoomRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!socket || joinedRoomRef.current === room._id) return;
+
+    if (joinedRoomRef.current) {
+      socket.emit("leave_room", joinedRoomRef.current);
+    }
+
     socket?.emit("join_room", room._id);
+    joinedRoomRef.current = room._id;
+    clearUnread(room._id);
+
     return () => {
-      socket?.emit("leave_room", room._id);
+      if (joinedRoomRef.current) {
+        socket.emit("leave_room", joinedRoomRef.current);
+        joinedRoomRef.current = null;
+      }
     };
   }, [room._id, socket]);
 
   useEffect(() => {
     if (!socket) return;
-    socket.on("user_typing", ({ username, isTyping }) => {
+
+    const handleTyping = ({
+      username,
+      isTyping,
+    }: {
+      username: string;
+      isTyping: boolean;
+    }) => {
       if (username === user?.username) return;
       setTypingUser(isTyping ? username : null);
-    });
-    return () => {
-      socket.off("user_typing");
     };
-  }, [socket, user]);
+
+    const handleKicked = ({ roomId }: { roomId: string }) => {
+      if (roomId === room._id) {
+        alert("You have been removed from this room");
+        window.location.reload();
+      }
+    };
+
+    socket.on("user_typing", handleTyping);
+    socket.on("kicked_from_room", handleKicked);
+
+    return () => {
+      socket.off("user_typing", handleTyping);
+      socket.off("kicked_from_room", handleKicked);
+    };
+  }, [socket, user?.username, room._id]);
 
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -78,9 +112,7 @@ export default function ChatWindow({ room }: ChatWindowProps) {
           </div>
         </div>
 
-        {/* Action icons */}
         <div className="flex items-center gap-2">
-          {/* Search */}
           <button
             className="w-9 h-9 rounded-full flex items-center justify-center transition hover:opacity-70"
             style={{ background: "var(--bg-input)" }}
@@ -102,29 +134,30 @@ export default function ChatWindow({ room }: ChatWindowProps) {
             </svg>
           </button>
 
-          {/* Members */}
-          <button
-            className="w-9 h-9 rounded-full flex items-center justify-center transition hover:opacity-70"
-            style={{ background: "var(--bg-input)" }}
-            title="More options"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="var(--text-secondary)"
+          {!room.isDirect && (
+            <button
+              onClick={() => setShowGroupSettings(true)}
+              className="w-9 h-9 rounded-full flex items-center justify-center transition hover:opacity-70"
+              style={{ background: "var(--bg-input)" }}
+              title="Members"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-              />
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="var(--text-secondary)"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </button>
+          )}
 
-          {/* More options */}
           <button
             className="w-9 h-9 rounded-full flex items-center justify-center transition hover:opacity-70"
             style={{ background: "var(--bg-input)" }}
@@ -165,8 +198,15 @@ export default function ChatWindow({ room }: ChatWindowProps) {
         <MessageList messages={messages} typingUser={typingUser} />
       )}
 
-      {/* Input */}
       <MessageInput roomId={room._id} onSendMessage={sendMessage} />
+
+      {showGroupSettings && !room.isDirect && (
+        <GroupSettings
+          room={room}
+          onClose={() => setShowGroupSettings(false)}
+          onRoomUpdated={() => setShowGroupSettings(false)}
+        />
+      )}
     </div>
   );
 }

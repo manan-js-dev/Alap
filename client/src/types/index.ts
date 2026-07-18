@@ -12,7 +12,8 @@ export interface Room {
   _id: string;
   name: string;
   description?: string;
-  members: string[];
+  members: string[] | RoomMember[];
+  admins?: string[];
   createdBy: { _id: string; username: string };
   lastMessage?: Message;
   isDirect?: boolean;
@@ -21,7 +22,16 @@ export interface Room {
     avatar?: string;
     isOnline: boolean;
   };
+  unreadCount?: number;
   createdAt: string;
+}
+
+export interface RoomMember {
+  _id: string;
+  username: string;
+  email: string;
+  avatar?: string;
+  isOnline: boolean;
 }
 
 export interface Message {
