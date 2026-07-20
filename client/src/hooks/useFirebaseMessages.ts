@@ -9,17 +9,28 @@ import {
 } from "firebase/database";
 import { db } from "../utils/firebase";
 import { useAuth } from "../context/AuthContext";
+import { useSocket } from "../hooks/useSocket";
 
 export interface FirebaseMessage {
   id: string;
   content: string;
   senderId: string;
   senderName: string;
+  senderAvatar?: string;
+  createdAt: number;
+}
+
+interface FirebaseMessageData {
+  content: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
   createdAt: number;
 }
 
 export const useFirebaseMessages = (roomId: string) => {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const [messages, setMessages] = useState<FirebaseMessage[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,13 +52,17 @@ export const useFirebaseMessages = (roomId: string) => {
       }
 
       const parsed: FirebaseMessage[] = Object.entries(data).map(
-        ([id, value]: [string, any]) => ({
-          id,
-          content: value.content,
-          senderId: value.senderId,
-          senderName: value.senderName,
-          createdAt: value.createdAt,
-        }),
+        ([id, value]) => {
+          const msg = value as FirebaseMessageData;
+          return {
+            id,
+            content: msg.content,
+            senderId: msg.senderId,
+            senderName: msg.senderName,
+            senderAvatar: msg.senderAvatar || "",
+            createdAt: msg.createdAt,
+          };
+        },
       );
 
       // Sort by time
@@ -67,8 +82,12 @@ export const useFirebaseMessages = (roomId: string) => {
       content: content.trim(),
       senderId: user.id,
       senderName: user.username,
+      senderAvatar: user.avatar || "",
       createdAt: serverTimestamp(),
     });
+
+    console.log("Emitting notify_message", { roomId, senderId: user.id });
+    socket?.emit("notify_message", { roomId, senderId: user.id });
   };
 
   return { messages, loading, sendMessage };

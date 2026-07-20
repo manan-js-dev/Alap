@@ -1,0 +1,121 @@
+import { useEffect, useState, useCallback } from "react";
+import type { DirectRoom, Room } from "../../types";
+import { useAuth } from "../../context/AuthContext";
+import { getErrorMessage } from "../../utils/error";
+import Avatar from "../UI/Avatar";
+import api from "../../utils/api";
+import { useSocket } from "../../hooks/useSocket";
+
+interface DirectMessageListProps {
+  selectedRoomId: string | null;
+  onSelectRoom: (room: Room) => void;
+  refreshTrigger: number;
+}
+
+export default function DirectMessageList({
+  selectedRoomId,
+  onSelectRoom,
+  refreshTrigger,
+}: DirectMessageListProps) {
+  const { user } = useAuth();
+  const [directRooms, setDirectRooms] = useState<DirectRoom[]>([]);
+  const [error, setError] = useState("");
+  const { unreadCounts } = useSocket();
+
+  const fetchDirectRooms = useCallback(async () => {
+    try {
+      const res = await api.get("/requests/direct-rooms");
+      setDirectRooms(res.data);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchDirectRooms();
+  }, [fetchDirectRooms, refreshTrigger]);
+
+  const getOtherUser = (room: DirectRoom) => {
+    return room.sender._id === user?.id ? room.receiver : room.sender;
+  };
+
+  if (error) return null;
+
+  if (directRooms.length === 0) return null;
+
+  return (
+    <div>
+      <p
+        className="text-xs font-semibold uppercase tracking-wide px-4 py-2"
+        style={{ color: "var(--text-secondary)" }}
+      >
+        Direct Messages
+      </p>
+      {directRooms.map((dm) => {
+        const otherUser = getOtherUser(dm);
+        return (
+          <button
+            key={dm._id}
+            onClick={() =>
+              onSelectRoom({
+                ...dm.room,
+                directUser: {
+                  username: otherUser.username,
+                  avatar: otherUser.avatar,
+                  isOnline: otherUser.isOnline,
+                },
+              })
+            }
+            className="w-full flex items-center gap-3 px-4 py-3 transition"
+            style={{
+              background:
+                selectedRoomId === dm.room._id
+                  ? "var(--active-color)"
+                  : "transparent",
+              borderBottom: "1px solid var(--border-color)",
+            }}
+            onMouseEnter={(e) => {
+              if (selectedRoomId !== dm.room._id)
+                (e.currentTarget as HTMLElement).style.background =
+                  "var(--hover-color)";
+            }}
+            onMouseLeave={(e) => {
+              if (selectedRoomId !== dm.room._id)
+                (e.currentTarget as HTMLElement).style.background =
+                  "transparent";
+            }}
+          >
+            <Avatar
+              username={otherUser.username}
+              avatar={otherUser.avatar}
+              isOnline={otherUser.isOnline}
+              size="md"
+            />
+            <div className="flex-1 text-left min-w-0">
+              <div className="flex items-center justify-between">
+                <p
+                  className="text-sm font-semibold truncate"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {otherUser.username}
+                </p>
+                {unreadCounts[dm.room._id] > 0 && (
+                  <span className="ml-2 min-w-5 h-5 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center px-1">
+                    {unreadCounts[dm.room._id]}
+                  </span>
+                )}
+              </div>
+              <p
+                className="text-xs truncate"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {otherUser.isOnline ? "Online" : "Offline"}
+              </p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}

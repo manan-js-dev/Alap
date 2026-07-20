@@ -5,14 +5,18 @@ import Room from '../models/Room';
 import User from '../models/User';
 import mongoose from 'mongoose';
 
+let ioInstance: Server;
+const onlineUsers = new Map<string, string>();
+
 export const socketHandler = (io: Server) => {
+  ioInstance = io;
+
   io.on('connection', async (socket: Socket) => {
-    // Look for auth.userId first (frontend), fallback to headers.userid (Postman)
     const userId = socket.handshake.auth?.userId || socket.handshake.headers['userid'];
     console.log(`⚡ User connected: ${userId}`);
 
-    // Mark user online
     if (userId) {
+      onlineUsers.set(userId, socket.id);
       await User.findByIdAndUpdate(userId, { isOnline: true });
       io.emit('user_status', { userId, isOnline: true });
     }
@@ -22,13 +26,9 @@ export const socketHandler = (io: Server) => {
       const cleanRoomId = roomId.replace(/"/g, '').trim();
       socket.join(cleanRoomId);
       console.log(`👤 User ${userId} joined room ${cleanRoomId}`);
-
-      // Add user to room members if not already
       await Room.findByIdAndUpdate(cleanRoomId, {
         $addToSet: { members: new mongoose.Types.ObjectId(userId) },
       });
-
-      // Notify others in room
       socket.to(cleanRoomId).emit('user_joined', { userId, cleanRoomId });
     });
 
@@ -51,6 +51,21 @@ export const socketHandler = (io: Server) => {
       }
 
       try {
+        const room = await Room.findById(cleanRoomId);
+        if (!room) {
+          socket.emit('error', { message: 'Room not found' });
+          return;
+        }
+
+        const isMember = room.members.some((m) => m.toString() === userId);
+        if (!isMember) {
+          socket.emit('error', {
+            message: 'You are not a member of this room',
+          });
+          socket.emit('kicked_from_room', { roomId: cleanRoomId });
+          return;
+        }
+
         const message = await Message.create({
           room: new mongoose.Types.ObjectId(cleanRoomId),
           sender: new mongoose.Types.ObjectId(userId),
@@ -61,9 +76,8 @@ export const socketHandler = (io: Server) => {
         await Room.findByIdAndUpdate(cleanRoomId, { lastMessage: message._id });
         const populated = await message.populate('sender', 'username isOnline');
         io.to(cleanRoomId).emit('new_message', populated);
-        console.log(`💬 Message sent to room ${cleanRoomId}: ${content}`);
-      } catch (err) {
-        socket.emit('error', { message: 'Failed to send message', error: err });
+      } catch {
+        socket.emit('error', { message: 'Failed to send message' });
       }
     });
 
@@ -72,10 +86,33 @@ export const socketHandler = (io: Server) => {
       socket.to(roomId).emit('user_typing', { username, isTyping });
     });
 
+    // Notify message to all room members
+    socket.on('notify_message', async ({ roomId, senderId }) => {
+      console.log(`📨 notify_message received for room ${roomId} from ${senderId}`);
+
+      const room = await Room.findById(roomId).select('members');
+      if (!room) return;
+
+      room.members.forEach((memberId) => {
+        const memberIdStr = memberId.toString();
+        if (memberIdStr !== senderId) {
+          const memberSocketId = onlineUsers.get(memberIdStr);
+          if (memberSocketId) {
+            console.log(`📨 Notifying member ${memberIdStr} via socket ${memberSocketId}`);
+            io.to(memberSocketId).emit('new_message_notification', {
+              roomId,
+              senderId,
+            });
+          }
+        }
+      });
+    });
+
     // Disconnect
     socket.on('disconnect', async () => {
       console.log(`❌ User disconnected: ${userId}`);
       if (userId) {
+        onlineUsers.delete(userId);
         await User.findByIdAndUpdate(userId, {
           isOnline: false,
           lastSeen: new Date(),
@@ -85,3 +122,6 @@ export const socketHandler = (io: Server) => {
     });
   });
 };
+
+export const getIO = () => ioInstance;
+export { onlineUsers };

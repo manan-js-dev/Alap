@@ -52,7 +52,13 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-indigo-400 mb-2">💬 Alap</h1>
+          <div className="flex items-center justify-center gap-2 ">
+            <img
+              src="/logo.png"
+              alt="Alap Logo"
+              className="w-[8rem] h-[8rem] object-contain"
+            />
+          </div>
           <p className="text-slate-400">
             Create your account and start chatting
           </p>

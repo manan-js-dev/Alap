@@ -5,6 +5,8 @@ export interface IUser extends Document {
   username: string;
   email: string;
   password: string;
+  avatar: string;
+  bio: string;
   isOnline: boolean;
   lastSeen: Date;
   // eslint-disable-next-line no-unused-vars
@@ -21,6 +23,8 @@ const userSchema = new Schema<IUser>({
   },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true, minlength: 6 },
+  avatar: { type: String, default: '' },
+  bio: { type: String, default: '', maxlength: 150 },
   isOnline: { type: Boolean, default: false },
   lastSeen: { type: Date, default: Date.now },
 });
