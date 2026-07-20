@@ -8,7 +8,7 @@ import SearchUsers from "./SearchUsers";
 import ChatRequests from "./ChatRequests";
 import DirectMessageList from "./DirectMessageList";
 import EditProfile from "./EditProfile";
-import { useSocket } from "../../context/SocketContext";
+import { useSocket } from "../../hooks/useSocket";
 import api from "../../utils/api";
 
 interface SidebarProps {
@@ -67,16 +67,11 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
     };
 
     const handleNewMessage = ({ roomId }: { roomId: string }) => {
-      console.log(
-        "new_message_notification received",
-        roomId,
-        "selected:",
-        selectedRoom?._id,
-      );
       if (roomId !== selectedRoom?._id) {
         incrementUnread(roomId);
       }
     };
+
     socket.on("new_request", handleNewRequest);
     socket.on("request_accepted", handleRequestAccepted);
     socket.on("new_message_notification", handleNewMessage);

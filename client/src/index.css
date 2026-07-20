@@ -62,3 +62,12 @@ body {
   background: var(--border-color);
   border-radius: 2px;
 }
+
+/* Hide emoji skin tone picker */
+.epr-skin-tones {
+  display: none !important;
+}
+
+.epr-skin-tone-select {
+  display: none !important;
+}

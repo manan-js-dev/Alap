@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getErrorMessage } from "../../utils/error";
 import Avatar from "../UI/Avatar";
 import api from "../../utils/api";
-import { useSocket } from "../../context/SocketContext";
+import { useSocket } from "../../hooks/useSocket";
 
 interface DirectMessageListProps {
   selectedRoomId: string | null;

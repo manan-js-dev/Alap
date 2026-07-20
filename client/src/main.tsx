@@ -6,6 +6,9 @@ import { SocketProvider } from "./context/SocketContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import App from "./App";
 import "./index.css";
+import { registerServiceWorker } from "./utils/notifications";
+
+registerServiceWorker();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

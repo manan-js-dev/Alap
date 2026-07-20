@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Room } from "../../types";
-import { useSocket } from "../../context/SocketContext";
+import { useSocket } from "../../hooks/useSocket";
 import { useAuth } from "../../context/AuthContext";
 import { useFirebaseMessages } from "../../hooks/useFirebaseMessages";
 import MessageList from "./MessageList";

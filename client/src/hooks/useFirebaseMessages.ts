@@ -9,7 +9,7 @@ import {
 } from "firebase/database";
 import { db } from "../utils/firebase";
 import { useAuth } from "../context/AuthContext";
-import { useSocket } from "../context/SocketContext";
+import { useSocket } from "../hooks/useSocket";
 
 export interface FirebaseMessage {
   id: string;
