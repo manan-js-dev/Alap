@@ -16,12 +16,14 @@ interface ChatWindowProps {
   room: Room;
   onRoomLeft: () => void;
   onRoomDeleted: () => void;
+  onBack: () => void;
 }
 
 export default function ChatWindow({
   room,
   onRoomLeft,
   onRoomDeleted,
+  onBack,
 }: ChatWindowProps) {
   const { user } = useAuth();
   const { messages, loading, sendMessage } = useFirebaseMessages(room._id);
@@ -239,6 +241,27 @@ export default function ChatWindow({
             </svg>
           </button>
         </div>
+        {/* Back button - mobile only */}
+        <button
+          onClick={onBack}
+          className="md:hidden w-8 h-8 rounded-full flex items-center justify-center mr-1 transition hover:opacity-70"
+          style={{ background: "var(--bg-input)" }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="var(--text-secondary)"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Messages */}
