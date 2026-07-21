@@ -7,8 +7,10 @@ import { ThemeProvider } from "./context/ThemeContext";
 import App from "./App";
 import "./index.css";
 import { registerServiceWorker } from "./utils/notifications";
+import { inject } from "@vercel/analytics";
 
 registerServiceWorker();
+inject();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
