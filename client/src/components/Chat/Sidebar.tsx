@@ -14,9 +14,14 @@ import api from "../../utils/api";
 interface SidebarProps {
   selectedRoom: Room | null;
   onSelectRoom: (room: Room) => void;
+  refreshTrigger: number;
 }
 
-export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
+export default function Sidebar({
+  selectedRoom,
+  onSelectRoom,
+  refreshTrigger,
+}: SidebarProps) {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const { socket, unreadCounts, incrementUnread } = useSocket();
@@ -31,6 +36,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
   const [search, setSearch] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
   const [refreshDMs, setRefreshDMs] = useState(0);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const fetchRooms = useCallback(async () => {
     try {
@@ -53,7 +59,7 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
   useEffect(() => {
     fetchRooms();
     fetchPendingCount();
-  }, [fetchRooms, fetchPendingCount]);
+  }, [fetchRooms, fetchPendingCount, refreshTrigger]);
 
   useEffect(() => {
     if (!socket) return;
@@ -114,45 +120,51 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
     >
       {/* Header */}
       <div
-        className="px-4 py-3 flex items-center justify-between"
+        className="px-4 py-3 flex flex-col gap-2"
         style={{ background: "var(--bg-secondary)" }}
       >
-        <button
-          onClick={() => setShowEditProfile(true)}
-          className="flex items-center gap-3 hover:opacity-80 transition"
-        >
-          {user?.avatar ? (
-            <img
-              src={user.avatar}
-              alt="avatar"
-              className="w-9 h-9 rounded-full object-cover"
-            />
-          ) : (
-            <Avatar
-              username={user?.username || "U"}
-              isOnline={true}
-              size="md"
-            />
-          )}
-          <div>
-            <p
-              className="text-sm font-semibold text-left"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {user?.username}
-            </p>
-            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-              Online
-            </p>
-          </div>
-        </button>
+        {/* User info row */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowEditProfile(true)}
+            className="flex items-center gap-3 hover:opacity-80 transition"
+          >
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt="avatar"
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <Avatar
+                username={user?.username || "U"}
+                isOnline={true}
+                size="md"
+              />
+            )}
+            <div>
+              <p
+                className="text-sm font-semibold text-left"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {user?.username}
+              </p>
+              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                Online
+              </p>
+            </div>
+          </button>
+        </div>
 
-        <div className="flex items-center gap-1">
+        {/* Action buttons row */}
+        <div
+          className="flex items-center justify-between px-1 py-1 rounded-lg"
+          style={{ background: "var(--bg-input)" }}
+        >
           {/* Find people */}
           <button
             onClick={() => setShowSearch(true)}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70"
-            style={{ background: "var(--bg-input)" }}
+            className="flex-1 flex flex-col items-center gap-0.5 py-1 rounded-lg hover:opacity-70 transition"
             title="Find people"
           >
             <svg
@@ -169,41 +181,56 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
                 d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
               />
             </svg>
+            <span
+              className="text-xs"
+              style={{ color: "var(--text-secondary)", fontSize: "9px" }}
+            >
+              Add
+            </span>
           </button>
 
           {/* Chat requests with badge */}
           <button
             onClick={() => setShowRequests(true)}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70 relative"
-            style={{ background: "var(--bg-input)" }}
+            className="flex-1 flex flex-col items-center gap-0.5 py-1 rounded-lg hover:opacity-70 transition relative"
             title="Chat requests"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="var(--text-secondary)"
+            <div className="relative">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="var(--text-secondary)"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                />
+              </svg>
+              {pendingCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-white flex items-center justify-center"
+                  style={{ fontSize: "8px" }}
+                >
+                  {pendingCount}
+                </span>
+              )}
+            </div>
+            <span
+              className="text-xs"
+              style={{ color: "var(--text-secondary)", fontSize: "9px" }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
-            </svg>
-            {pendingCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
-                {pendingCount}
-              </span>
-            )}
+              Requests
+            </span>
           </button>
 
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70"
-            style={{ background: "var(--bg-input)" }}
+            className="flex-1 flex flex-col items-center gap-0.5 py-1 rounded-lg hover:opacity-70 transition"
             title={isDark ? "Light mode" : "Dark mode"}
           >
             {isDark ? (
@@ -237,13 +264,18 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
                 />
               </svg>
             )}
+            <span
+              className="text-xs"
+              style={{ color: "var(--text-secondary)", fontSize: "9px" }}
+            >
+              {isDark ? "Light" : "Dark"}
+            </span>
           </button>
 
           {/* New room */}
           <button
             onClick={() => setShowCreate(!showCreate)}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70"
-            style={{ background: "var(--bg-input)" }}
+            className="flex-1 flex flex-col items-center gap-0.5 py-1 rounded-lg hover:opacity-70 transition"
             title="New room"
           >
             <svg
@@ -260,13 +292,18 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
                 d="M12 4v16m8-8H4"
               />
             </svg>
+            <span
+              className="text-xs"
+              style={{ color: "var(--text-secondary)", fontSize: "9px" }}
+            >
+              Room
+            </span>
           </button>
 
           {/* Logout */}
           <button
-            onClick={logout}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition hover:opacity-70"
-            style={{ background: "var(--bg-input)" }}
+            onClick={() => setShowLogoutConfirm(true)}
+            className="flex-1 flex flex-col items-center gap-0.5 py-1 rounded-lg hover:opacity-70 transition"
             title="Sign out"
           >
             <svg
@@ -283,6 +320,12 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
               />
             </svg>
+            <span
+              className="text-xs"
+              style={{ color: "var(--text-secondary)", fontSize: "9px" }}
+            >
+              Logout
+            </span>
           </button>
         </div>
       </div>
@@ -476,6 +519,71 @@ export default function Sidebar({ selectedRoom, onSelectRoom }: SidebarProps) {
       )}
       {showEditProfile && (
         <EditProfile onClose={() => setShowEditProfile(false)} />
+      )}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+        >
+          <div
+            className="w-80 rounded-2xl p-6 shadow-xl"
+            style={{ background: "var(--bg-primary)" }}
+          >
+            <div className="text-center mb-5">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+                style={{ background: "rgba(239,68,68,0.1)" }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-7 h-7 text-red-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+              </div>
+              <h3
+                className="text-lg font-semibold mb-1"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Sign Out
+              </h3>
+              <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                Are you sure you want to sign out?
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition hover:opacity-80"
+                style={{
+                  background: "var(--bg-input)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  logout();
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition hover:opacity-80"
+                style={{ background: "#ef4444" }}
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import Room from '../models/Room';
 import { AuthRequest } from '../middleware/auth.middleware';
 import mongoose from 'mongoose';
+import Message from '../models/Message';
 
 export const getRooms = async (req: AuthRequest, res: Response) => {
   try {
@@ -163,6 +164,23 @@ export const makeAdmin = async (req: AuthRequest, res: Response) => {
     await room.save();
 
     res.json({ message: 'User promoted to admin' });
+  } catch {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const deleteRoom = async (req: AuthRequest, res: Response) => {
+  try {
+    const room = await Room.findById(req.params.id);
+    if (!room) return res.status(404).json({ message: 'Room not found' });
+
+    const isAdmin = room.admins.some((a) => a.toString() === req.userId);
+    if (!isAdmin) return res.status(403).json({ message: 'Only admins can delete this room' });
+
+    await Room.findByIdAndDelete(req.params.id);
+    await Message.deleteMany({ room: req.params.id });
+
+    res.json({ message: 'Room deleted successfully' });
   } catch {
     res.status(500).json({ message: 'Server error' });
   }

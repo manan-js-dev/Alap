@@ -26,9 +26,6 @@ export const socketHandler = (io: Server) => {
       const cleanRoomId = roomId.replace(/"/g, '').trim();
       socket.join(cleanRoomId);
       console.log(`👤 User ${userId} joined room ${cleanRoomId}`);
-      await Room.findByIdAndUpdate(cleanRoomId, {
-        $addToSet: { members: new mongoose.Types.ObjectId(userId) },
-      });
       socket.to(cleanRoomId).emit('user_joined', { userId, cleanRoomId });
     });
 

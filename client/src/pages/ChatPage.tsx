@@ -5,16 +5,31 @@ import ChatWindow from "../components/Chat/ChatWindow";
 
 export default function ChatPage() {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [refreshRooms, setRefreshRooms] = useState(0);
 
   return (
     <div
       className="flex h-screen overflow-hidden"
       style={{ background: "var(--bg-chat)" }}
     >
-      <Sidebar selectedRoom={selectedRoom} onSelectRoom={setSelectedRoom} />
+      <Sidebar
+        selectedRoom={selectedRoom}
+        onSelectRoom={setSelectedRoom}
+        refreshTrigger={refreshRooms}
+      />
 
       {selectedRoom ? (
-        <ChatWindow room={selectedRoom} />
+        <ChatWindow
+          room={selectedRoom}
+          onRoomLeft={() => {
+            setSelectedRoom(null);
+            setRefreshRooms((prev) => prev + 1);
+          }}
+          onRoomDeleted={() => {
+            setSelectedRoom(null);
+            setRefreshRooms((prev) => prev + 1);
+          }}
+        />
       ) : (
         <div
           className="flex-1 flex items-center justify-center"

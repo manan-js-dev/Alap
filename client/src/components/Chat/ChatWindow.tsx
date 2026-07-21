@@ -7,18 +7,30 @@ import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import Avatar from "../UI/Avatar";
 import GroupSettings from "./GroupSettings";
+import RoomMenu from "./RoomMenu";
+import { ref, remove } from "firebase/database";
+import { db } from "../../utils/firebase";
+import api from "../../utils/api";
 
 interface ChatWindowProps {
   room: Room;
+  onRoomLeft: () => void;
+  onRoomDeleted: () => void;
 }
 
-export default function ChatWindow({ room }: ChatWindowProps) {
+export default function ChatWindow({
+  room,
+  onRoomLeft,
+  onRoomDeleted,
+}: ChatWindowProps) {
   const { user } = useAuth();
   const { messages, loading, sendMessage } = useFirebaseMessages(room._id);
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const { socket, clearUnread } = useSocket();
   const joinedRoomRef = useRef<string | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!socket || joinedRoomRef.current === room._id) return;
@@ -68,6 +80,53 @@ export default function ChatWindow({ room }: ChatWindowProps) {
       socket.off("kicked_from_room", handleKicked);
     };
   }, [socket, user?.username, room._id]);
+
+  useEffect(() => {
+    if (room.isDirect) return;
+    const checkAdmin = async () => {
+      try {
+        const res = await api.get(`/rooms/${room._id}`);
+        const admins: string[] =
+          res.data.admins?.map((a: string) => a.toString()) || [];
+        setIsAdmin(admins.includes(user?.id || ""));
+      } catch {
+        setIsAdmin(false);
+      }
+    };
+    checkAdmin();
+  }, [room._id, room.isDirect, user?.id]);
+
+  const handleClearChat = async () => {
+    setShowMenu(false);
+    try {
+      const messagesRef = ref(db, `rooms/${room._id}/messages`);
+      await remove(messagesRef);
+    } catch (error) {
+      console.error("Failed to clear chat:", error);
+    }
+  };
+
+  const handleLeaveRoom = async () => {
+    setShowMenu(false);
+    try {
+      await api.delete(`/rooms/${room._id}/leave`);
+      onRoomLeft();
+    } catch (error) {
+      console.error("Failed to leave room:", error);
+    }
+  };
+
+  const handleDeleteRoom = async () => {
+    setShowMenu(false);
+    try {
+      await api.delete(`/rooms/${room._id}`);
+      const messagesRef = ref(db, `rooms/${room._id}/messages`);
+      await remove(messagesRef);
+      onRoomDeleted();
+    } catch (error) {
+      console.error("Failed to delete room:", error);
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -159,8 +218,9 @@ export default function ChatWindow({ room }: ChatWindowProps) {
           )}
 
           <button
+            onClick={() => setShowMenu(!showMenu)}
             className="w-9 h-9 rounded-full flex items-center justify-center transition hover:opacity-70"
-            style={{ background: "var(--bg-input)" }}
+            style={{ background: showMenu ? "#0084ff" : "var(--bg-input)" }}
             title="More options"
           >
             <svg
@@ -168,7 +228,7 @@ export default function ChatWindow({ room }: ChatWindowProps) {
               className="w-4 h-4"
               fill="none"
               viewBox="0 0 24 24"
-              stroke="var(--text-secondary)"
+              stroke={showMenu ? "white" : "var(--text-secondary)"}
             >
               <path
                 strokeLinecap="round"
@@ -205,6 +265,17 @@ export default function ChatWindow({ room }: ChatWindowProps) {
           room={room}
           onClose={() => setShowGroupSettings(false)}
           onRoomUpdated={() => setShowGroupSettings(false)}
+        />
+      )}
+
+      {showMenu && (
+        <RoomMenu
+          isDirect={room.isDirect || false}
+          isAdmin={isAdmin}
+          onClose={() => setShowMenu(false)}
+          onClearChat={handleClearChat}
+          onLeaveRoom={handleLeaveRoom}
+          onDeleteRoom={handleDeleteRoom}
         />
       )}
     </div>
