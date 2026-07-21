@@ -6,7 +6,6 @@ import User from '../models/User';
 import mongoose from 'mongoose';
 
 let ioInstance: Server;
-const onlineUsers = new Map<string, string>();
 
 export const socketHandler = (io: Server) => {
   ioInstance = io;
@@ -16,12 +15,13 @@ export const socketHandler = (io: Server) => {
     console.log(`⚡ User connected: ${userId}`);
 
     if (userId) {
-      onlineUsers.set(userId, socket.id);
-      await User.findByIdAndUpdate(userId, { isOnline: true });
+      await User.findByIdAndUpdate(userId, {
+        isOnline: true,
+        socketId: socket.id,
+      });
       io.emit('user_status', { userId, isOnline: true });
     }
 
-    // Join a room
     socket.on('join_room', async (roomId: string) => {
       const cleanRoomId = roomId.replace(/"/g, '').trim();
       socket.join(cleanRoomId);
@@ -32,14 +32,12 @@ export const socketHandler = (io: Server) => {
       socket.to(cleanRoomId).emit('user_joined', { userId, cleanRoomId });
     });
 
-    // Leave a room
     socket.on('leave_room', (roomId: string) => {
       const cleanRoomId = roomId.replace(/"/g, '').trim();
       socket.leave(cleanRoomId);
       socket.to(cleanRoomId).emit('user_left', { userId, roomId: cleanRoomId });
     });
 
-    // Send a message
     socket.on('send_message', async (data) => {
       const roomId = typeof data === 'string' ? JSON.parse(data).roomId : data.roomId;
       const content = typeof data === 'string' ? JSON.parse(data).content : data.content;
@@ -81,41 +79,41 @@ export const socketHandler = (io: Server) => {
       }
     });
 
-    // Typing indicator
     socket.on('typing', ({ roomId, username, isTyping }) => {
       socket.to(roomId).emit('user_typing', { username, isTyping });
     });
 
-    // Notify message to all room members
     socket.on('notify_message', async ({ roomId, senderId }) => {
       console.log(`📨 notify_message received for room ${roomId} from ${senderId}`);
 
       const room = await Room.findById(roomId).select('members');
       if (!room) return;
 
-      room.members.forEach((memberId) => {
-        const memberIdStr = memberId.toString();
-        if (memberIdStr !== senderId) {
-          const memberSocketId = onlineUsers.get(memberIdStr);
-          if (memberSocketId) {
-            console.log(`📨 Notifying member ${memberIdStr} via socket ${memberSocketId}`);
-            io.to(memberSocketId).emit('new_message_notification', {
-              roomId,
-              senderId,
-            });
-          }
+      // Get socket IDs from DB instead of memory Map
+      const members = await User.find({
+        _id: { $in: room.members },
+        isOnline: true,
+        socketId: { $exists: true, $ne: null },
+      }).select('_id socketId');
+
+      members.forEach((member) => {
+        if (member._id.toString() !== senderId && member.socketId) {
+          console.log(`📨 Notifying member ${member._id} via socket ${member.socketId}`);
+          io.to(member.socketId).emit('new_message_notification', {
+            roomId,
+            senderId,
+          });
         }
       });
     });
 
-    // Disconnect
     socket.on('disconnect', async () => {
       console.log(`❌ User disconnected: ${userId}`);
       if (userId) {
-        onlineUsers.delete(userId);
         await User.findByIdAndUpdate(userId, {
           isOnline: false,
           lastSeen: new Date(),
+          socketId: null,
         });
         io.emit('user_status', { userId, isOnline: false });
       }
@@ -124,4 +122,3 @@ export const socketHandler = (io: Server) => {
 };
 
 export const getIO = () => ioInstance;
-export { onlineUsers };

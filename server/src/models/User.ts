@@ -9,6 +9,7 @@ export interface IUser extends Document {
   bio: string;
   isOnline: boolean;
   lastSeen: Date;
+  socketId?: string;
   // eslint-disable-next-line no-unused-vars
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
@@ -26,6 +27,7 @@ const userSchema = new Schema<IUser>({
   avatar: { type: String, default: '' },
   bio: { type: String, default: '', maxlength: 150 },
   isOnline: { type: Boolean, default: false },
+  socketId: { type: String, default: null },
   lastSeen: { type: Date, default: Date.now },
 });
 
