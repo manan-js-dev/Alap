@@ -59,7 +59,7 @@ export const getRequests = async (req: AuthRequest, res: Response) => {
     const requests = await ChatRequest.find({
       receiver: req.userId,
       status: 'pending',
-    }).populate('sender', 'username email isOnline');
+    }).populate('sender', 'username email isOnline avatar');
 
     res.json(requests);
   } catch {
@@ -134,8 +134,8 @@ export const getDirectRooms = async (req: AuthRequest, res: Response) => {
       $or: [{ sender: req.userId }, { receiver: req.userId }],
       status: 'accepted',
     })
-      .populate('sender', 'username isOnline')
-      .populate('receiver', 'username isOnline')
+      .populate('sender', 'username isOnline avatar')
+      .populate('receiver', 'username isOnline avatar')
       .populate('room');
 
     res.json(requests);
