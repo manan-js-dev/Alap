@@ -12,6 +12,7 @@ import messageRoutes from './routes/message.routes';
 import { socketHandler } from './utils/socket';
 import userRoutes from './routes/user.routes';
 import chatRequestRoutes from './routes/chatRequest.routes';
+import { startCronJobs } from './utils/cron';
 
 const app = express();
 const server = http.createServer(app);
@@ -65,6 +66,7 @@ connectDB().then(() => {
   server.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Server is running on port ${PORT}`);
+    startCronJobs();
   });
 });
 
